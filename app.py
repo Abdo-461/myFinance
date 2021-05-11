@@ -5,8 +5,8 @@ import os
 from boto3.dynamodb.conditions import Key
 
 # create dynamo object with access and secret keys
-dynamodb = boto3.resource('dynamodb', aws_access_key_id='AKIART3OCGHFW5QANYOI',
-                          aws_secret_access_key='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',
+dynamodb = boto3.resource('dynamodb', aws_access_key_id='',
+                          aws_secret_access_key='',
                           region_name='us-east-1')
 
 # s3 object to define s3 bucket
