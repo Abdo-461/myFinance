@@ -100,9 +100,39 @@ def dashboard():
 def credit():
     return render_template('creditcheck.html', username=session['user_name'])
 
-@application.route("/userprofile")
+@application.route("/userprofile", methods=["POST", "GET"])
 def userprofile():
-    return render_template('userprofile.html')
+    if request.method=='POST':
+        #get user information from form
+        oldPassword = request.form['old-password']
+        newPassword = request.form['new-password']
+        #get table
+        table = dynamodb.Table('users')
+        #query table and comapre email
+        response = table.query(
+                KeyConditionExpression=Key('user_email').eq(session['user_email'])
+        )
+        #put results in items
+        items = response['Items']
+        for item in items:
+            #compare password
+            if oldPassword == item['password']:
+                response = table.update_item(
+                    Key={
+                        'user_email': session['user_email']
+                        },
+                        UpdateExpression="set password = :p",
+                        ExpressionAttributeValues={
+                            ':p': newPassword,
+                            },
+                            ReturnValues="UPDATED_NEW"
+                            )
+                flash('Your Password has successfully been changed!')
+                return redirect(url_for('userprofile', username=session['user_name']))
+
+        flash("Old Password Incorrect")
+
+    return render_template('userprofile.html', username=session['user_name'])
 
 @application.route('/loans')
 def loans():
