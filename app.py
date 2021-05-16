@@ -100,8 +100,17 @@ def dashboard():
 def credit():
     return render_template('creditcheck.html', username=session['user_name'])
 
-@application.route("/userprofile", methods=["POST", "GET"])
+@application.route("/userprofile" ,methods=["GET"])
 def userprofile():
+    return render_template('userprofile.html', username=session['user_name'])
+
+@application.route('/loans')
+def loans():
+    return render_template('loans.html', username=session['user_name'])
+
+#password change function --START--
+@application.route('/passwordChange', methods=['POST'])
+def passwordChange():
     if request.method=='POST':
         #get user information from form
         oldPassword = request.form['old-password']
@@ -119,7 +128,8 @@ def userprofile():
             if oldPassword == item['password']:
                 response = table.update_item(
                     Key={
-                        'user_email': session['user_email']
+                        'user_email': session['user_email'],
+                        'user_name' : session['user_name']
                         },
                         UpdateExpression="set password = :p",
                         ExpressionAttributeValues={
@@ -128,16 +138,11 @@ def userprofile():
                             ReturnValues="UPDATED_NEW"
                             )
                 flash('Your Password has successfully been changed!')
-                return redirect(url_for('userprofile', username=session['user_name']))
+                return redirect(url_for('userprofile'))
 
         flash("Old Password Incorrect")
-
-    return render_template('userprofile.html', username=session['user_name'])
-
-@application.route('/loans')
-def loans():
-    return render_template('loans.html', username=session['user_name'])
-
+    return redirect(url_for('userprofile'))
+#password change function --START--
 
 #Credit check function --START--
 
@@ -236,7 +241,7 @@ def creditCheck():
     elif creditScore > 700:
         message='You have excellent credit!'
 
-    return render_template('creditcheck.html' , loanScore = loanScore , cardScore = cardScore,billScore = billScore, creditScore = creditScore, message = message, username=session['user_name'])
+    return render_template('creditcheck.html' , loanScore = loanScore, cardScore = cardScore, billScore = billScore, creditScore = creditScore, message = message, username=session['user_name'])
 
 #Credit Check function --END--
 
@@ -267,10 +272,9 @@ def saveCredit():
 #Save credit score function --end--
 
 #check elligble loans function --START--
-
+global elgibleLoan
 @application.route('/eligibleLoans')
 def eligibleLoans():
-
     #refernece credit table
     creditTable = dynamodb.Table('CreditScores')
     #query credit table to fetch user's credit score
@@ -296,10 +300,35 @@ def eligibleLoans():
     if not loanItems:
         flash("Sorry, you are not eligible for any loans")
 
-    return render_template('loans.html', elgibleLoan = loanItems)
-
-
+    return render_template('loans.html', elgibleLoan = loanItems, username=session['user_name'])
 #check elligble loans function --END--
+
+#calculat interest rate function --START--
+interestToPay = None
+@application.route('/checkRate' , methods=['GET','POST'])
+def checkRate():
+    if request.method=='POST':
+        #fetch info given by user
+        loanID = request.form['loanid']
+        payments = request.form['payments']
+        #reference ytable
+        eligibleLoansTable = dynamodb.Table('EligibleLoans')
+        #query table to get interest rate
+        response = eligibleLoansTable.query(
+                    KeyConditionExpression=Key('loan_id').eq(loanID)
+            )
+        #put response in items variable
+        items = response['Items']
+        #get rate and loan amount
+        interestRate = items[0]['interest_rate']
+        loanPrinciple = items[0]['loan_amount']
+        #calculate interest to paid
+        interestToPay = interestRate / Decimal(payments) * loanPrinciple
+
+
+    return render_template('loans.html', paidInterest = round(interestToPay))
+
+#calculat interest rate function --END--
 
 
 application.secret_key = 'super secret key'

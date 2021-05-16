@@ -21,7 +21,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
   <meta name="description" content="Start your development with a Dashboard for Bootstrap 4.">
   <meta name="author" content="Creative Tim">
-  <title>myFinance - Credit Check</title>
+  <title>myFinance - Eligible Loans</title>
   <!-- Favicon -->
   <link rel="icon" href="static/assets/img/brand/favicon.png" type="image/png">
   <!-- Fonts -->
@@ -74,24 +74,6 @@
               <a class="nav-link" href="tables.html">
                 <i class="ni ni-bullet-list-67 text-default"></i>
                 <span class="nav-link-text">Tables</span>
-              </a>
-            </li>
-            <li class="nav-item">
-              <a class="nav-link" href="login.html">
-                <i class="ni ni-key-25 text-info"></i>
-                <span class="nav-link-text">Login</span>
-              </a>
-            </li>
-            <li class="nav-item">
-              <a class="nav-link" href="register.html">
-                <i class="ni ni-circle-08 text-pink"></i>
-                <span class="nav-link-text">Register</span>
-              </a>
-            </li>
-            <li class="nav-item">
-              <a class="nav-link" href="upgrade.html">
-                <i class="ni ni-send text-dark"></i>
-                <span class="nav-link-text">Upgrade</span>
               </a>
             </li>
           </ul>
@@ -432,9 +414,17 @@
                       {% endfor %}
                 </div>
                 <button class="creditButton" id='interestButton'>Check Interest Rate</button>
-                <form style="display:none"id="interestForm">
+
+                <form action="/checkRate" style="display:none" id="interestForm", method="POST">
+                  <p>Loan Id</p>
+                  <input type="text" name="loanid">
                   <p>Number of payments</p>
-                  <input type="number" name="numberOfPayments">
+                  <input type="number" name="payments">
+                  
+                  <p>Interest to pay</p>
+                  <p>{{paidInterest}}</p>
+
+                  <button type="submit" id="interestB">check</button>
                 </form>
                 </div>
               </div>
@@ -490,7 +480,5 @@
     });
   });
   </script>
-  
-
 </body>
 </html>
