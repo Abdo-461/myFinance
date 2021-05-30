@@ -1,9 +1,23 @@
-from flask import Flask, render_template, request, flash , redirect , url_for , json , session
+from flask import Flask, render_template, request, flash, redirect, url_for, json, session
+from flask_dance.contrib.github import make_github_blueprint, github
+from flask_dance.contrib.google import make_google_blueprint, google
 from decimal import Decimal
 import boto3
 import re
+import os
 from boto3.dynamodb.conditions import Key
 
+github_blueprint = make_github_blueprint(
+    scope=["email"],
+    client_id=os.getenv("GITHUB_ID"),
+    client_secret=os.getenv("GITHUB_SECRET"),
+)
+
+google_blueprint = make_google_blueprint(
+    client_id=os.getenv("GOOGLE_ID"),
+    client_secret=os.getenv("GOOGLE_SECRET"),
+    scope=["profile", "email"]
+)
 
 #create dynamo object with access and secret keys
 dynamodb = boto3.resource('dynamodb',aws_access_key_id='',
@@ -90,6 +104,72 @@ def logout():
 
 #logout function --END--
 
+# Github Login function --START--
+@application.route("/github")
+def githubLogin():
+    if not github.authorized:
+        return redirect(url_for("github.login"))
+    res = github.get("/user")
+    if res.ok:
+        oauth = github_blueprint.session.access_token
+        account_info = res.json()
+        session['user_name'] = account_info["name"]
+        session['user_email'] = account_info["email"]
+        # check if user is in the DB otherwise add email, password, oauth token
+        table = dynamodb.Table('oauthusers')
+        # Query table to see if email exists
+        response = table.query(
+            KeyConditionExpression=Key('user_email').eq(session['user_email'])
+        )
+        items = response['Items']
+        # If email doesn't exist add information to database table
+        if not items:
+            table.put_item(
+                Item={
+                    'user_email': session['user_email'],
+                    'user_name': session['user_name'],
+                    'oauth_token': oauth
+                }
+            )
+    # validate oauth token
+    if oauth == response['Items'][0]['oauth_token'] :
+        return redirect(url_for('dashboard'))
+# Github Login function --END--
+
+# Google Login function --START--
+@application.route("/google")
+def googleLogin():
+    if not google.authorized:
+        return redirect(url_for("google.login"))
+    res = google.get("/oauth2/v1/userinfo")
+    if res.ok:
+        oauth = google_blueprint.session.access_token
+        account_info = res.json()
+        session['user_name'] = account_info["name"]
+        session['user_email'] = account_info["email"]
+        # check if user is in the DB otherwise add email, password, oauth token
+        table = dynamodb.Table('oauthusers')
+        # Query table to see if email exists
+        response = table.query(
+            KeyConditionExpression=Key('user_email').eq(session['user_email'])
+        )
+        items = response['Items']
+        # If email doesn't exist add information to database table
+        if not items:
+            table.put_item(
+                Item={
+                    'user_email': session['user_email'],
+                    'user_name': session['user_name'],
+                    'oauth_token': oauth
+                }
+            )
+    # validate oauth token
+    if oauth == response['Items'][0]['oauth_token']:
+        return redirect(url_for('dashboard'))
+# Google Login function --END--
+
+
+
 
 @application.route("/dashboard")
 def dashboard():
@@ -169,7 +249,7 @@ def creditCheck():
     #query table
     loanResponse = loanTable.query(
         KeyConditionExpression=Key('user_email').eq(session['user_email'])
-    )
+    ) 
     #put response in items variable
     loanItems = loanResponse['Items']
     #iterate through the items and compare paid off time with terms to determine loan payments health
@@ -185,7 +265,7 @@ def creditCheck():
         loanScore=300
     elif len(loanPaidOnTime) == len(loanPaidLate):
         loanScore=260
-
+    
     #credit card repayment
     #refernce table
     creditCardTable = dynamodb.Table('CreditCardPayments')
@@ -250,16 +330,16 @@ def creditCheck():
 #save credit score to database
 @application.route('/saveCredit' , methods=["POST"])
 def saveCredit():
- if request.method=='POST':
+ if request.method=='POST':   
     #fetch credit score
     creditScore = request.form['creditscore']
     #referene table
-    creditScoreTable = dynamodb.Table('CreditScores')
+    creditScoreTable = dynamodb.Table('CreditScores') 
     #validate if input is empty
     if creditScore is None:
         flash('You need to check your credit first')
         return redirect(url_for('credit'))
-
+    
     creditScoreTable.put_item(
         Item={
             'user_email':session['user_email'],
@@ -296,14 +376,15 @@ def eligibleLoans():
         KeyConditionExpression=Key('min_cs').eq(creditScore)
     )
     #put items in Item variable
-    loanItems = eligibleLoanResponse["Items"]
+    loanItems = eligibleLoanResponse["Items"]   
     if not loanItems:
         flash("Sorry, you are not eligible for any loans")
 
-    return render_template('loans.html', elgibleLoan = loanItems, username=session['user_name'])
+    return render_template('loans.html', elgibleLoan = loanItems, username=session['user_name']) 
 #check elligble loans function --END--
 
 #calculat interest rate function --START--
+
 interestToPay = None
 @application.route('/checkRate' , methods=['GET','POST'])
 def checkRate():
@@ -321,18 +402,19 @@ def checkRate():
         items = response['Items']
         #get rate and loan amount
         interestRate = items[0]['interest_rate']
-        loanPrinciple = items[0]['loan_amount']
+        loanPrinciple = items[0]['loan_amount']    
         #calculate interest to paid
         interestToPay = interestRate / Decimal(payments) * loanPrinciple
-
-
+        
     return render_template('loans.html', paidInterest = round(interestToPay))
-
+ 
 #calculat interest rate function --END--
 
 
 application.secret_key = 'super secret key'
 application.config['SESSION_TYPE'] = 'filesystem'
+application.register_blueprint(github_blueprint, url_prefix="/login")
+application.register_blueprint(google_blueprint, url_prefix="/login")
 
 if __name__ == '__main__':
     application.run(port=8000,debug=True)
