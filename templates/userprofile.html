@@ -61,35 +61,16 @@
               </a>
             </li>
             <li class="nav-item">
-              <a class="nav-link" href="map.html">
+              <a class="nav-link" href="{{ url_for('loans') }}">
                 <i class="ni ni-pin-3 text-primary"></i>
-                <span class="nav-link-text">Google</span>
+                <span class="nav-link-text">Check Eligible Loans</span>
               </a>
             </li>
-            
             </li>
             <li class="nav-item">
               <a class="nav-link" href="tables.html">
                 <i class="ni ni-bullet-list-67 text-default"></i>
                 <span class="nav-link-text">Tables</span>
-              </a>
-            </li>
-            <li class="nav-item">
-              <a class="nav-link" href="login.html">
-                <i class="ni ni-key-25 text-info"></i>
-                <span class="nav-link-text">Login</span>
-              </a>
-            </li>
-            <li class="nav-item">
-              <a class="nav-link" href="register.html">
-                <i class="ni ni-circle-08 text-pink"></i>
-                <span class="nav-link-text">Register</span>
-              </a>
-            </li>
-            <li class="nav-item">
-              <a class="nav-link" href="upgrade.html">
-                <i class="ni ni-send text-dark"></i>
-                <span class="nav-link-text">Upgrade</span>
               </a>
             </li>
           </ul>
@@ -338,7 +319,7 @@
                     <img alt="Image placeholder" src="static/assets/img/theme/team-4.jpg">
                   </span>
                   <div class="media-body  ml-2  d-none d-lg-block">
-                    <span class="mb-0 text-sm  font-weight-bold">John Snow</span>
+                    <span class="mb-0 text-sm  font-weight-bold">{{username}}</span>
                   </div>
                 </div>
               </a>
@@ -535,7 +516,7 @@
                 </div>
               </form>
               <hr class="my-4" />
-              <form action="/userprofile" role="form" method="POST">
+              <form action="/passwordChange" role="form" method="POST">
                 <h6 class="heading-small text-muted mb-4">Change Password</h6>
                 <div class="form-group mb-2">
                   <div class="col-lg-4" style="margin:0 auto;">
