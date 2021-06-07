@@ -4,6 +4,8 @@ from flask_dance.contrib.google import make_google_blueprint, google
 from sendgrid import SendGridAPIClient
 from sendgrid.helpers.mail import Mail
 from random import randint
+from datetime import date, datetime, timedelta
+import requests
 from decimal import Decimal
 import boto3
 import re
@@ -260,7 +262,7 @@ def passwordReset():
         except:
             flash('Please request a verfication code first!')
             return render_template('passwordReset.html')
-        verifyCode = request.form['verifyCode']   
+        verifyCode = request.form['verifyCode']
         password = request.form['password']
         table = dynamodb.Table('users')
         if int(verifyCode) == session['verify_code']:
@@ -277,7 +279,7 @@ def passwordReset():
             session.pop('verify_code', None)
             return redirect(url_for('login'))
         else:
-            flash('Invalid Verification Code!')  
+            flash('Invalid Verification Code!')
     return render_template('passwordReset.html')
 # password reset function --END--
 
@@ -318,6 +320,32 @@ def passwordChange():
         flash("Old Password Incorrect")
     return redirect(url_for('userprofile'))
 # password change function --END--
+
+# Exchange rates function --START--
+
+
+@application.route('/exchangeRates', methods=['POST', 'GET'])
+def exchangeRates():
+    if request.method == 'POST':
+        try:
+            request.form['currency']
+        except:
+            flash("An error has occured please select a currency and try again")
+            return render_template('exchangeRates.html')
+        currency = request.form['currency']
+        currentDate = datetime.today()
+        monthAgo = currentDate.month - 1
+        currentDate = currentDate.strftime('%Y-%m-%d')
+        lastMonth = datetime.today().replace(month=monthAgo).strftime('%Y-%m-%d')
+        url = "https://5z68g150mc.execute-api.us-east-1.amazonaws.com/" + currency + \
+            "?start_date=" + lastMonth + "&end_date=" + \
+            currentDate + "&api_key=wq3dM8kdtTWZ3JoNUGdU"
+        response = requests.get(url)
+        rates = response.json()['dataset']['data']
+        exchangeName = response.json()['dataset']['name']
+        return render_template('exchangeRates.html', rates=rates, exchangeName=exchangeName, currentDate=currentDate, lastMonth=lastMonth)
+    return render_template('exchangeRates.html')
+# Exchange rates function --END--
 
 # Credit check function --START--
 
